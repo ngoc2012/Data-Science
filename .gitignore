@@ -1,0 +1,7 @@
+00/subject.zip
+**/*.zip
+*.pdf
+**/*.pdf
+01/data_2023_feb.csv
+**/*.csv
+*.csv
