@@ -1,0 +1,1 @@
+psql -U minh-ngu -d piscineds -h localhost -W
