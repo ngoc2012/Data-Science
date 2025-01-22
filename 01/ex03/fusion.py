@@ -68,11 +68,11 @@ if __name__ == "__main__":
         d.cursor.execute(sql.SQL("""
             UPDATE {schema}.{table}
             SET 
-                category_id = {schema}.items.category_id,
-                category_code = {schema}.items.category_code,
-                brand = {schema}.items.brand
-            FROM {schema}.items
-            WHERE {schema}.{table}.product_id = {schema}.items.product_id;
+                category_id = {schema}.item.category_id,
+                category_code = {schema}.item.category_code,
+                brand = {schema}.item.brand
+            FROM {schema}.item
+            WHERE {schema}.{table}.product_id = {schema}.item.product_id;
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
