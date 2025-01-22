@@ -5,7 +5,6 @@ import subprocess
 class TestAllClass(ut.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.folder = "/home/ngoc/42/Data Science/00/"
         cls.csv_files = [
             "data_col_error.csv",
             "data_col.csv",
@@ -21,7 +20,7 @@ class TestAllClass(ut.TestCase):
 
     def test_tester_output_matches_expected(self):
         for i, csv_file in enumerate(self.csv_files):
-            result = subprocess.run(['python3', 'table.py', self.folder + self.csv_files[i]], 
+            result = subprocess.run(['python3', 'table.py', self.csv_files[i]], 
                                 stdout=subprocess.PIPE, 
                                 stderr=subprocess.PIPE, 
                                 text=True)
