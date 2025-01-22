@@ -158,7 +158,7 @@ if __name__ == "__main__":
     d = database(sys.argv[1])
     try:
         d.connect()
-        if not d.table_exists() and validate_csv(d.csv_file):
+        if validate_csv(sys.argv[1]) and not d.table_exists():
             d.create_table()
             d.import_csv()
     except Exception as e:
