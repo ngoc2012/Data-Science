@@ -4,6 +4,20 @@ import csv
 import psycopg2
 from psycopg2 import sql
 
+
+def get_csv_files(csv_dir: str) -> list[str]:
+    """ Get a list of CSV files in a directory """
+    try:
+        files = os.listdir(csv_dir)
+        return [os.path.splitext(f)[0] for f in files if f.endswith(".csv")]
+    except FileNotFoundError:
+        print(f"Error: The directory '{csv_dir}' does not exist.")
+        return None
+    except PermissionError:
+        print(f"Error: Permission denied to access the directory '{csv_dir}'.")
+        return None
+
+
 class database:
     def __init__(self, csv_dir: str):
         self.db_name = "piscineds"
@@ -82,13 +96,13 @@ WHERE table_schema = %s AND table_name = %s);"
                 joined_table=sql.Identifier(self.joined_table),
                 union_query=combined_query,
             )
-            with self.connection.cursor() as cursor:
+            with self.conn.cursor() as cursor:
                 cursor.execute(final_query)
-                self.connection.commit()
+                self.conn.commit()
             print(f"Successfully joined tables into '{self.joined_table}'.")
         except Exception as e:
             print(f"Error joining tables: {e}")
-            drop_table(self.joined_table)
+            self.drop_table(self.joined_table)
 
     def close(self):
         if self.conn is not None:
