@@ -78,7 +78,7 @@ if __name__ == "__main__":
             table=sql.Identifier(d.joined_table)
         ))
         d.conn.commit()
-
+        print("Tables joined successfully.")
     except Exception as e:
         print(f"An error occurred: {e}")
         d.conn.rollback()

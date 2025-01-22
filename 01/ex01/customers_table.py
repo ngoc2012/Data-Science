@@ -1,6 +1,5 @@
 import os
 import sys
-import csv
 import psycopg2
 from psycopg2 import sql
 
@@ -74,13 +73,14 @@ WHERE table_schema = %s AND table_name = %s);"
         """ Join tables in the database """
         try:
             if self.table_exists(self.joined_table):
-                with self.conn.cursor() as cursor:
-                    cursor.execute(
-                        sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-                        .format(schema=sql.Identifier(self.schema), table=sql.Identifier(self.joined_table))
+                d.cursor.execute(
+                    sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
+                    .format(
+                        schema=sql.Identifier(self.schema),
+                        table=sql.Identifier(self.joined_table)
                     )
-                    initial_customers_count = cursor.fetchone()[0]
-                    print(f"Initial rows count of 'customers' table: {initial_customers_count}")
+                )
+                print(f"Customers table rows: {d.cursor.fetchone()[0]}")
 
             table_row_counts = {}
             base_query = []
@@ -89,13 +89,11 @@ WHERE table_schema = %s AND table_name = %s);"
                 if not self.table_exists(f):
                     print(f"Error: Table {self.schema}.{f} does not exist.")
                     return
-                
-                with self.conn.cursor() as cursor:
-                    cursor.execute(
-                        sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-                        .format(schema=sql.Identifier(self.schema), table=sql.Identifier(f))
-                    )
-                    table_row_counts[f] = cursor.fetchone()[0]
+                d.cursor.execute(
+                    sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
+                    .format(schema=sql.Identifier(self.schema), table=sql.Identifier(f))
+                )
+                table_row_counts[f] = cursor.fetchone()[0]
 
                 print(f"Rows count of '{self.schema}.{f}': {table_row_counts[f]}")
 
@@ -106,7 +104,7 @@ WHERE table_schema = %s AND table_name = %s);"
                     )
                 )
             combined_query = sql.SQL(" UNION ALL ").join(base_query)
-            final_query = sql.SQL(
+            d.cursor.execute(sql.SQL(
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{joined_table} AS {union_query}
                 """
@@ -114,17 +112,14 @@ WHERE table_schema = %s AND table_name = %s);"
                 schema=sql.Identifier(self.schema),
                 joined_table=sql.Identifier(self.joined_table),
                 union_query=combined_query,
-            )
-            with self.conn.cursor() as cursor:
-                cursor.execute(final_query)
-                self.conn.commit()
+            ))
+            self.conn.commit()
             print(f"Successfully joined tables into {self.joined_table}'.")
-            with self.conn.cursor() as cursor:
-                cursor.execute(
-                    sql.SQL("SELECT COUNT(*) FROM {schema}.{joined_table}")
-                    .format(schema=sql.Identifier(self.schema), joined_table=sql.Identifier(self.joined_table))
-                )
-                joined_table_count = cursor.fetchone()[0]
+            d.cursor.execute(
+                sql.SQL("SELECT COUNT(*) FROM {schema}.{joined_table}")
+                .format(schema=sql.Identifier(self.schema), joined_table=sql.Identifier(self.joined_table))
+            )
+            joined_table_count = cursor.fetchone()[0]
 
             print(f"Total rows in joined table '{self.joined_table}': {joined_table_count}")
             print(f"Sum of individual table row counts:{sum(table_row_counts.values())}")
