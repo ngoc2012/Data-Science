@@ -63,6 +63,12 @@ if __name__ == "__main__":
         print(f"Initial rows count of 'customers' table{initial_customers_count}")
         # ROW_NUMBER() to assign a unique row number to each duplicate group
         """
+        WITH cte AS (
+            SELECT 
+                order_id,
+                ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date) AS row_num
+            FROM orders
+        )
         order_id customer_id   order_date    order_amount row_num
             1        101  2025-01-01 10:00:00   100.00       1
             3        101  2025-01-01 12:00:00   150.00       2
