@@ -13,10 +13,10 @@ class TestAllClass(ut.TestCase):
             ""
         ]
         cls.expected_outputs = [
-            "Error: '" + cls.folder + "data_col_error.csv' has incorrect column.",
-            "Error: '" + cls.folder + "data_col.csv' must have 6 columns.",
-            "Error: '" + cls.folder + "data_head.csv' has incorrect column.",
-            "Error: '" + cls.folder + "' is not a file."
+            "Error: '/home/ngoc/42/Data Science/00/samples/data_col_error.csv' has incorrect column.",
+            "Error: '/home/ngoc/42/Data Science/00/samples/data_col.csv' must have 6 columns.",
+            "Error: '/home/ngoc/42/Data Science/00/samples/data_head.csv' has incorrect column.",
+            "Error: '/home/ngoc/42/Data Science/00/samples/' is not a file."
         ]
 
     def test_tester_output_matches_expected(self):
