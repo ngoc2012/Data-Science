@@ -54,23 +54,6 @@ if __name__ == "__main__":
         if d.table_exists("customers") is False:
             print("The customers table does not exist.")
             sys.exit(1)
-    
-        d.cursor.execute(
-            sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-            .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
-        )
-        initial_customers_count = cursor.fetchone()[0]
-        print(f"Initial rows count of 'customers' table{initial_customers_count}")
-        # ROW_NUMBER() to assign a unique row number to each duplicate group
-        """
-        order_id customer_id   order_date    order_amount row_num
-            1        101  2025-01-01 10:00:00   100.00       1
-            3        101  2025-01-01 12:00:00   150.00       2
-            5        101  2025-01-02 10:00:00   120.00       3
-            2        102  2025-01-01 11:00:00   200.00       1
-            6        102  2025-01-02 11:00:00   220.00       2
-            4        103  2025-01-01 13:00:00   250.00       1
-        """
         query = sql.SQL("""
             WITH cte AS (
                 SELECT 
@@ -101,12 +84,13 @@ if __name__ == "__main__":
         d.conn.commit()
         print("Duplicates successfully removed from the customers table.")
 
-        d.cursor.execute(
-            sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-            .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
-        )
-        customers_count = cursor.fetchone()[0]
-        print(f"Rows count of 'customers' table after purge{customers_count}")
+        with d.conn.cursor() as cursor:
+            cursor.execute(
+                sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
+                .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
+            )
+            customers_count = cursor.fetchone()[0]
+            print(f"Rows count of 'customers' table after purge:{customers_count}")
 
         verify_query = sql.SQL("""
         SELECT event_time, event_type, product_id, price, user_id, user_session, COUNT(*) 
