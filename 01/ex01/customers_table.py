@@ -73,14 +73,14 @@ WHERE table_schema = %s AND table_name = %s);"
     def join_tables(self) -> None:
         """ Join tables in the database """
         try:
-            if table_exists(self.joined_table):
+            if self.table_exists(self.joined_table):
                 with self.conn.cursor() as cursor:
                     cursor.execute(
                         sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-                        .format(schema=sql.Identifier(self.schema), table=sql.Identifier('customers'))
+                        .format(schema=sql.Identifier(self.schema), table=sql.Identifier(self.joined_table))
                     )
                     initial_customers_count = cursor.fetchone()[0]
-                print(f"Initial rows count of 'customers' table: {initial_customers_count}")
+                    print(f"Initial rows count of 'customers' table: {initial_customers_count}")
 
             table_row_counts = {}
             base_query = []
@@ -90,7 +90,7 @@ WHERE table_schema = %s AND table_name = %s);"
                     print(f"Error: Table {self.schema}.{f} does not exist.")
                     return
                 
-                with self.connection.cursor() as cursor:
+                with self.conn.cursor() as cursor:
                     cursor.execute(
                         sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
                         .format(schema=sql.Identifier(self.schema), table=sql.Identifier(f))
@@ -105,33 +105,34 @@ WHERE table_schema = %s AND table_name = %s);"
                         table=sql.Identifier(f),
                     )
                 )
-                combined_query = sql.SQL(" UNION ALL ").join(base_query)
-                final_query = sql.SQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS {schema}.{joined_table} AS {union_query}
-                    """
-                ).format(
-                    schema=sql.Identifier(self.schema),
-                    joined_table=sql.Identifier(self.joined_table),
-                    union_query=combined_query,
+            combined_query = sql.SQL(" UNION ALL ").join(base_query)
+            final_query = sql.SQL(
+                """
+                CREATE TABLE IF NOT EXISTS {schema}.{joined_table} AS {union_query}
+                """
+            ).format(
+                schema=sql.Identifier(self.schema),
+                joined_table=sql.Identifier(self.joined_table),
+                union_query=combined_query,
+            )
+            with self.conn.cursor() as cursor:
+                cursor.execute(final_query)
+                self.conn.commit()
+            print(f"Successfully joined tables into {self.joined_table}'.")
+            with self.conn.cursor() as cursor:
+                cursor.execute(
+                    sql.SQL("SELECT COUNT(*) FROM {schema}.{joined_table}")
+                    .format(schema=sql.Identifier(self.schema), joined_table=sql.Identifier(self.joined_table))
                 )
-                with self.connection.cursor() as cursor:
-                    cursor.execute(final_query)
-                    self.connection.commit()
-                print(f"Successfully joined tables into '{self.joined_table}'.")
-                with self.connection.cursor() as cursor:
-                    cursor.execute(
-                        sql.SQL("SELECT COUNT(*) FROM {schema}.{joined_table}")
-                        .format(schema=sql.Identifier(self.schema), joined_table=sql.Identifier(self.joined_table))
-                    )
-                    joined_table_count = cursor.fetchone()[0]
-                print(f"Total rows in joined table '{self.joined_table}': {joined_table_count}")
-                print(f"Sum of individual table row counts: {sum(table_row_counts.values())}")
+                joined_table_count = cursor.fetchone()[0]
 
-                if joined_table_count == sum(table_row_counts.values()):
-                    print("Row count verification passed!")
-                else:
-                    print("Row count verification failed!")
+            print(f"Total rows in joined table '{self.joined_table}': {joined_table_count}")
+            print(f"Sum of individual table row counts:{sum(table_row_counts.values())}")
+
+            if joined_table_count == sum(table_row_counts.values()):
+                print("Row count verification passed!")
+            else:
+                print("Row count verification failed!")
         except Exception as e:
             print(f"Error joining tables: {e}")
             self.drop_table(self.joined_table)
