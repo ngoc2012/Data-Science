@@ -54,66 +54,34 @@ if __name__ == "__main__":
         if d.table_exists("customers") is False:
             print("The customers table does not exist.")
             sys.exit(1)
-        query = sql.SQL("""
-            WITH cte AS (
-                SELECT 
-                    event_time,
-                    event_type,
-                    product_id,
-                    price,
-                    user_id,
-                    user_session,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY event_time, event_type, product_id, price, user_id, user_session
-                        ORDER BY event_time
-                    ) AS row_num
-                FROM {schema}.{table}
-            )
-            DELETE FROM {schema}.{table}
-            WHERE (event_time, event_type, product_id, price, user_id, user_session) IN (
-                SELECT event_time, event_type, product_id, price, user_id, user_session
-                FROM cte
-                WHERE row_num > 1
-            );
+
+        d.cursor.execute(sql.SQL("""
+            ALTER TABLE {schema}.{table}
+            ADD COLUMN IF NOT EXISTS category_id BIGINT,
+            ADD COLUMN IF NOT EXISTS category_code TEXT,
+            ADD COLUMN IF NOT EXISTS brand TEXT;
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
-        )
+        ))
 
-        d.cursor.execute(query)
+        d.cursor.execute(sql.SQL("""
+            UPDATE {schema}.{table}
+            SET 
+                category_id = {schema}.items.category_id,
+                category_code = {schema}.items.category_code,
+                brand = {schema}.items.brand
+            FROM {schema}.items
+            WHERE {schema}.{table}.product_id = {schema}.items.product_id;
+        """).format(
+            schema=sql.Identifier(d.schema),
+            table=sql.Identifier(d.joined_table)
+        ))
         d.conn.commit()
-        print("Duplicates successfully removed from the customers table.")
-
-        with d.conn.cursor() as cursor:
-            cursor.execute(
-                sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-                .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
-            )
-            customers_count = cursor.fetchone()[0]
-            print(f"Rows count of 'customers' table after purge:{customers_count}")
-
-        verify_query = sql.SQL("""
-        SELECT event_time, event_type, product_id, price, user_id, user_session, COUNT(*) 
-        FROM {schema}.{table}
-        GROUP BY event_time, event_type, product_id, price, user_id, user_session
-        HAVING COUNT(*) > 1;
-        """).format(
-            schema=sql.Identifier(d.schema),
-            table=sql.Identifier(d.joined_table)
-        )
-        d.cursor.execute(verify_query)
-        duplicate_rows = d.cursor.fetchall()
-
-        if duplicate_rows:
-            print("Duplicates still exist after the operation. Details:")
-            for row in duplicate_rows:
-                print(row)
-        else:
-            print("No duplicates found. Verification passed!")
 
     except Exception as e:
         print(f"An error occurred: {e}")
+        d.conn.rollback()
         sys.exit(1)
     finally:
         d.close()
-        sys.exit(0)

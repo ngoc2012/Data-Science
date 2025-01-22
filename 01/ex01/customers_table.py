@@ -164,4 +164,3 @@ if __name__ == "__main__":
         sys.exit(1)
     finally:
         d.close()
-        sys.exit(0)

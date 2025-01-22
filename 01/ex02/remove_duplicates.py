@@ -71,7 +71,7 @@ if __name__ == "__main__":
             6        102  2025-01-02 11:00:00   220.00       2
             4        103  2025-01-01 13:00:00   250.00       1
         """
-        query = sql.SQL("""
+        d.cursor.execute(sql.SQL("""
             WITH cte AS (
                 SELECT 
                     event_time,
@@ -95,9 +95,7 @@ if __name__ == "__main__":
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
-        )
-
-        d.cursor.execute(query)
+        ))
         d.conn.commit()
         print("Duplicates successfully removed from the customers table.")
 
@@ -108,7 +106,7 @@ if __name__ == "__main__":
         customers_count = cursor.fetchone()[0]
         print(f"Rows count of 'customers' table after purge{customers_count}")
 
-        verify_query = sql.SQL("""
+        d.cursor.execute(sql.SQL("""
         SELECT event_time, event_type, product_id, price, user_id, user_session, COUNT(*) 
         FROM {schema}.{table}
         GROUP BY event_time, event_type, product_id, price, user_id, user_session
@@ -116,8 +114,7 @@ if __name__ == "__main__":
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
-        )
-        d.cursor.execute(verify_query)
+        ))
         duplicate_rows = d.cursor.fetchall()
 
         if duplicate_rows:
@@ -129,7 +126,7 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"An error occurred: {e}")
+        d.conn.rollback()
         sys.exit(1)
     finally:
         d.close()
-        sys.exit(0)
