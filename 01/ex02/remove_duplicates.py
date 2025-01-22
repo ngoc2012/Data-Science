@@ -54,6 +54,16 @@ if __name__ == "__main__":
         if d.table_exists("customers") is False:
             print("The customers table does not exist.")
             sys.exit(1)
+        # ROW_NUMBER() to assign a unique row number to each duplicate group
+        """
+        order_id customer_id   order_date    order_amount row_num
+            1        101  2025-01-01 10:00:00   100.00       1
+            3        101  2025-01-01 12:00:00   150.00       2
+            5        101  2025-01-02 10:00:00   120.00       3
+            2        102  2025-01-01 11:00:00   200.00       1
+            6        102  2025-01-02 11:00:00   220.00       2
+            4        103  2025-01-01 13:00:00   250.00       1
+        """
         query = sql.SQL("""
             WITH cte AS (
                 SELECT 
@@ -80,7 +90,6 @@ if __name__ == "__main__":
             table=sql.Identifier(d.joined_table)
         )
 
-        # Execute the query
         d.cursor.execute(query)
         d.conn.commit()
         print("Duplicates successfully removed from the customers table.")
@@ -94,7 +103,6 @@ if __name__ == "__main__":
         d.cursor.execute(verify_query)
         duplicate_rows = d.cursor.fetchall()
 
-        # Check for duplicates
         if duplicate_rows:
             print("Duplicates still exist after the operation. Details:")
             for row in duplicate_rows:
