@@ -17,7 +17,8 @@ class TestAllClass(ut.TestCase):
             "Error: '/home/ngoc/42/Data Science/00/samples/data_col_error.csv' has incorrect column.",
             "Error: '/home/ngoc/42/Data Science/00/samples/data_col.csv' must have 6 columns.",
             "Error: '/home/ngoc/42/Data Science/00/samples/data_head.csv' has incorrect column.",
-            "Error: '/home/ngoc/42/Data Science/00/samples/' is not a file."
+            "Error: '/home/ngoc/42/Data Science/00/samples/' is not a file.",
+            "Error : [Errno 13] Permission denied: '/home/ngoc/42/Data Science/00/samples/unreadable.csv'"
         ]
 
     def test_tester_output_matches_expected(self):

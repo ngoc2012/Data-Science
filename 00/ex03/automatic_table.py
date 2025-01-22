@@ -176,7 +176,7 @@ if __name__ == "__main__":
     if d.files is None:
         sys.exit(1)
     if len(d.files) == 0:
-        print(f"No csv files found in {sys.argv[1]}.")
+        print(f"No csv files found in '{sys.argv[1]}'.")
         sys.exit(1)
     try:
         d.connect()
