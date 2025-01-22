@@ -54,6 +54,13 @@ if __name__ == "__main__":
         if d.table_exists("customers") is False:
             print("The customers table does not exist.")
             sys.exit(1)
+        with d.conn.cursor() as cursor:
+            cursor.execute(
+                sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
+                .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
+            )
+            initial_customers_count = cursor.fetchone()[0]
+            print(f"Initial rows count of 'customers' table:{initial_customers_count}")
         # ROW_NUMBER() to assign a unique row number to each duplicate group
         """
         order_id customer_id   order_date    order_amount row_num
@@ -94,12 +101,23 @@ if __name__ == "__main__":
         d.conn.commit()
         print("Duplicates successfully removed from the customers table.")
 
-        verify_query = """
+        with d.conn.cursor() as cursor:
+            cursor.execute(
+                sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
+                .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
+            )
+            customers_count = cursor.fetchone()[0]
+            print(f"Rows count of 'customers' table after purge:{customers_count}")
+
+        verify_query = sql.SQL("""
         SELECT event_time, event_type, product_id, price, user_id, user_session, COUNT(*) 
-        FROM customers
+        FROM {schema}.{table}
         GROUP BY event_time, event_type, product_id, price, user_id, user_session
         HAVING COUNT(*) > 1;
-        """
+        """).format(
+            schema=sql.Identifier(d.schema),
+            table=sql.Identifier(d.joined_table)
+        )
         d.cursor.execute(verify_query)
         duplicate_rows = d.cursor.fetchall()
 
