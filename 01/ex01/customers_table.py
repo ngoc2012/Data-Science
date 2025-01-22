@@ -60,6 +60,7 @@ class database:
         self.csv_dir = csv_dir
         self.conn = None
         self.cursor = None
+        self.joined_table = "customers"
         self.files = get_csv_files(self.csv_dir)
 
     def connect(self) -> None:
@@ -161,40 +162,26 @@ WHERE table_schema = %s AND table_name = %s);"
 
     def join_tables(self) -> None:
         """ Join tables in the database """
-        for f in self.files:
-            if not self.table_exists(f):
-                print(f"Error: Table {self.schema}.{f} does not exist.")
-                return
-            print(f"Joining tables '{self.schema + '.' + f}' ...")
-            query = sql.SQL(
-                """
-                CREATE TABLE {schema}.customers AS
-                SELECT * FROM {schema}.{table}
-                UNION ALL
-                SELECT * FROM {schema}.joined_table;
-                """
-            ).format(
-                schema=sql.Identifier(self.schema),
-                table=sql.Identifier(f)
-            )
-        print(f"Creating table {self.schema}.{table_name} ...")
-        query = sql.SQL(
-            """
-            CREATE TABLE {schema}.{table} (
-                event_time TIMESTAMP,
-                event_type TEXT,
-                product_id INT,
-                price NUMERIC(10, 2),
-                user_id INT,
-                user_session UUID NULL
-            );
-            """
-        ).format(
-            schema=sql.Identifier(self.schema),
-            table=sql.Identifier(table_name))
-        self.cursor.execute(query)
-        self.conn.commit()
-        print(f"Table {self.schema}.{table_name} created.")
+        try:
+            for f in self.files:
+                if not self.table_exists(f):
+                    print(f"Error: Table {self.schema}.{f} does not exist.")
+                    return
+                print(f"Joining tables '{self.schema + '.' + f}' ...")
+                query = sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {schema}.{joined_table} AS
+                    SELECT * FROM {schema}.{table}
+                    UNION ALL
+                    """
+                ).format(
+                    schema=sql.Identifier(self.schema),
+                    table=sql.Identifier(f),
+                    joined_table=sql.Identifier(self.joined_table)
+                )
+        except Exception as e:
+            print(f"Error joining tables: {e}")
+            drop_table(self.joined_table)
 
     def close(self):
         if self.conn is not None:
