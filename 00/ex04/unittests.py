@@ -21,7 +21,7 @@ class TestAllClass(ut.TestCase):
             "Error : [Errno 13] Permission denied: '/home/ngoc/42/Data Science/00/samples/unreadable.csv'"
         ]
 
-    def test_tester_output_matches_expected(self):
+    def test_output_matches_expected(self):
         for i, csv_file in enumerate(self.csv_files):
             result = subprocess.run(['python3', 'items_table.py', self.csv_files[i]], 
                                 stdout=subprocess.PIPE, 
