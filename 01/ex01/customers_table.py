@@ -4,52 +4,6 @@ import csv
 import psycopg2
 from psycopg2 import sql
 
-
-def validate_csv(csv_file: str) -> bool:
-    """ Validate the integrity of a CSV file. """
-    expected_columns = [
-        "event_time",
-        "event_type",
-        "product_id",
-        "price",
-        "user_id",
-        "user_session",
-    ]
-    try:
-        if not os.path.isfile(csv_file):
-            print(f"Error: '{csv_file}' is not a file.")
-            return False
-        with open(csv_file, 'r') as f:
-            reader = csv.reader(f)
-            header = next(reader, None)
-            if header is None:
-                print(f"Error: '{csv_file}' is missing a header.")
-                return False
-            if len(header) != len(cols):
-                print(f"Error: '{csv_file}' must have {len(cols)} columns.")
-                return False
-            if header != cols:
-                print(f"Error: '{csv_file}' has incorrect column.")
-                return False
-        return True
-    except Exception as e:
-        print(f"Error :'{csv_file}' {e}")
-        return False
-
-
-def get_csv_files(csv_dir: str) -> list[str]:
-    """ Get a list of CSV files in a directory """
-    try:
-        files = os.listdir(csv_dir)
-        return [os.path.splitext(f)[0] for f in files if f.endswith(".csv")]
-    except FileNotFoundError:
-        print(f"Error: The directory '{csv_dir}' does not exist.")
-        return None
-    except PermissionError:
-        print(f"Error: Permission denied to access the directory '{csv_dir}'.")
-        return None
-
-
 class database:
     def __init__(self, csv_dir: str):
         self.db_name = "piscineds"
@@ -85,50 +39,6 @@ WHERE table_schema = %s AND table_name = %s);"
             return True
         return False
 
-    def create_table(self, table_name: str) -> None:
-        """ Create a new table in the database """
-        print(f"Creating table {self.schema}.{table_name} ...")
-        query = sql.SQL(
-            """
-            CREATE TABLE {schema}.{table} (
-                event_time TIMESTAMP,
-                event_type TEXT,
-                product_id INT,
-                price NUMERIC(10, 2),
-                user_id INT,
-                user_session UUID NULL
-            );
-            """
-        ).format(
-            schema=sql.Identifier(self.schema),
-            table=sql.Identifier(table_name))
-        self.cursor.execute(query)
-        self.conn.commit()
-        print(f"Table {self.schema}.{table_name} created.")
-
-    def import_csv(self, table_name: str, csv_file: str) -> None:
-        """ Import data from a CSV file into a table """
-        try:
-            with open(csv_file, 'r') as f:
-                copy_query = sql.SQL(
-                    """
-                    COPY {schema}.{table} (event_time, event_type, product_id, price, user_id, user_session)
-                    FROM STDIN
-                    DELIMITER ','
-                    CSV HEADER NULL AS '';
-                    """
-                ).format(
-                    schema=sql.Identifier(self.schema),
-                    table=sql.Identifier(table_name),
-                )
-                self.cursor.copy_expert(copy_query, f)
-                self.conn.commit()
-                print(f"Data imported from {csv_file} into {self.schema}.{table_name}.")
-        except Exception as e:
-            self.conn.rollback()
-            print(f"Error importing CSV file {csv_file} into table {self.schema}.{table_name}: {e}")
-            self.drop_table(table_name)
-
     def drop_table(self, table_name: str) -> None:
         """ Drop a table from the database """
         try:
@@ -146,20 +56,6 @@ WHERE table_schema = %s AND table_name = %s);"
             self.conn.rollback()
             print(f"Error dropping table {self.schema}.{table_name}: {e}")
 
-    def process_csv_files(self) -> None:
-        """ Process CSV files in a directory """
-        n = 0
-        for table_name in self.files:
-            csv_file = os.path.join(self.csv_dir, table_name + ".csv")
-            if not self.table_exists(table_name) and validate_csv(csv_file):
-                n += 1
-                self.create_table(table_name)
-                self.import_csv(table_name, csv_file)
-        if n == 0:
-            print("No new valid csv file found.")
-            return
-        print("All CSV files processed.")
-
     def join_tables(self) -> None:
         """ Join tables in the database """
         try:
@@ -167,18 +63,29 @@ WHERE table_schema = %s AND table_name = %s);"
                 if not self.table_exists(f):
                     print(f"Error: Table {self.schema}.{f} does not exist.")
                     return
-                print(f"Joining tables '{self.schema + '.' + f}' ...")
-                query = sql.SQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS {schema}.{joined_table} AS
-                    SELECT * FROM {schema}.{table}
-                    UNION ALL
-                    """
-                ).format(
-                    schema=sql.Identifier(self.schema),
-                    table=sql.Identifier(f),
-                    joined_table=sql.Identifier(self.joined_table)
+            print(f"Joining tables into '{self.schema + '.' + self.joined_table}' ...")
+            base_query = []
+            for f in self.files:
+                base_query.append(
+                    sql.SQL("SELECT * FROM {schema}.{table}").format(
+                        schema=sql.Identifier(self.schema),
+                        table=sql.Identifier(f),
+                    )
                 )
+            combined_query = sql.SQL(" UNION ALL ").join(base_query)
+            final_query = sql.SQL(
+                """
+                CREATE TABLE IF NOT EXISTS {schema}.{joined_table} AS {union_query}
+                """
+            ).format(
+                schema=sql.Identifier(self.schema),
+                joined_table=sql.Identifier(self.joined_table),
+                union_query=combined_query,
+            )
+            with self.connection.cursor() as cursor:
+                cursor.execute(final_query)
+                self.connection.commit()
+            print(f"Successfully joined tables into '{self.joined_table}'.")
         except Exception as e:
             print(f"Error joining tables: {e}")
             drop_table(self.joined_table)
@@ -204,7 +111,7 @@ if __name__ == "__main__":
         sys.exit(1)
     try:
         d.connect()
-        d.process_csv_files()
+        d.join_tables()
     except Exception as e:
         print(f"An error occurred: {e}")
         sys.exit(1)
