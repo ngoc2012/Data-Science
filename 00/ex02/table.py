@@ -33,7 +33,7 @@ def validate_csv(csv_file: str) -> bool:
                 return False
         return True
     except Exception as e:
-        print(f"Error :'{csv_file}' {e}")
+        print(f"Error : {e}")
         return False
 
 

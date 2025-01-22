@@ -9,7 +9,9 @@ class TestAllClass(ut.TestCase):
             "/home/ngoc/42/Data Science/00/samples/data_col_error.csv",
             "/home/ngoc/42/Data Science/00/samples/data_col.csv",
             "/home/ngoc/42/Data Science/00/samples/data_head.csv",
-            "/home/ngoc/42/Data Science/00/samples/"
+            "/home/ngoc/42/Data Science/00/samples/",
+            "/home/ngoc/42/Data Science/00/samples/unreadable.csv"
+
         ]
         cls.expected_outputs = [
             "Error: '/home/ngoc/42/Data Science/00/samples/data_col_error.csv' has incorrect column.",
