@@ -1,6 +1,4 @@
-import os
 import sys
-import csv
 import psycopg2
 from psycopg2 import sql
 
@@ -54,7 +52,7 @@ if __name__ == "__main__":
         if d.table_exists("customers") is False:
             print("The customers table does not exist.")
             sys.exit(1)
-    
+
         d.cursor.execute(
             sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
             .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
