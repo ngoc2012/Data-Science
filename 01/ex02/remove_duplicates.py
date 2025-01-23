@@ -52,13 +52,12 @@ if __name__ == "__main__":
         if d.table_exists("customers") is False:
             print("The customers table does not exist.")
             sys.exit(1)
-
-        d.cursor.execute(
-            sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-            .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
-        )
-        initial_customers_count = cursor.fetchone()[0]
-        print(f"Initial rows count of 'customers' table{initial_customers_count}")
+        d.cursor.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table}").format(
+                schema=sql.Identifier(d.schema),
+                table=sql.Identifier(d.joined_table)
+        ))
+        initial_customers_count = d.cursor.fetchone()[0]
+        print(f"Customers table count: {initial_customers_count}")
         # ROW_NUMBER() to assign a unique row number to each duplicate group
         """
         WITH cte AS (
