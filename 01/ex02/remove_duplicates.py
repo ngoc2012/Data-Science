@@ -52,18 +52,20 @@ if __name__ == "__main__":
         if d.table_exists("customers") is False:
             print("The customers table does not exist.")
             sys.exit(1)
-        d.cursor.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table}").format(
+        d.cursor.execute(
+            sql.SQL("SELECT COUNT(*) FROM {schema}.{table}").format(
                 schema=sql.Identifier(d.schema),
                 table=sql.Identifier(d.joined_table)
-        ))
+            ))
         initial_customers_count = d.cursor.fetchone()[0]
         print(f"Customers table count: {initial_customers_count}")
         # ROW_NUMBER() to assign a unique row number to each duplicate group
         """
         WITH cte AS (
-            SELECT 
+            SELECT
                 order_id,
-                ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date) AS row_num
+                ROW_NUMBER() OVER \
+(PARTITION BY customer_id ORDER BY order_date) AS row_num
             FROM orders
         )
         order_id customer_id   order_date    order_amount row_num
@@ -76,7 +78,7 @@ if __name__ == "__main__":
         """
         d.cursor.execute(sql.SQL("""
             WITH cte AS (
-                SELECT 
+                SELECT
                     event_time,
                     event_type,
                     product_id,
@@ -84,14 +86,17 @@ if __name__ == "__main__":
                     user_id,
                     user_session,
                     ROW_NUMBER() OVER (
-                        PARTITION BY event_time, event_type, product_id, price, user_id, user_session
+                        PARTITION BY \
+event_time, event_type, product_id, price, user_id, user_session
                         ORDER BY event_time
                     ) AS row_num
                 FROM {schema}.{table}
             )
             DELETE FROM {schema}.{table}
-            WHERE (event_time, event_type, product_id, price, user_id, user_session) IN (
-                SELECT event_time, event_type, product_id, price, user_id, user_session
+            WHERE (event_time, event_type, product_id, price, \
+user_id, user_session) IN (
+                SELECT event_time, event_type, product_id, price, \
+user_id, user_session
                 FROM cte
                 WHERE row_num > 1
             );
@@ -104,15 +109,19 @@ if __name__ == "__main__":
 
         d.cursor.execute(
             sql.SQL("SELECT COUNT(*) FROM {schema}.{table}")
-            .format(schema=sql.Identifier(d.schema), table=sql.Identifier(d.joined_table))
-        )
-        customers_count = cursor.fetchone()[0]
+            .format(
+                schema=sql.Identifier(d.schema),
+                table=sql.Identifier(d.joined_table)
+            ))
+        customers_count = d.cursor.fetchone()[0]
         print(f"Rows count of 'customers' table after purge{customers_count}")
 
         d.cursor.execute(sql.SQL("""
-        SELECT event_time, event_type, product_id, price, user_id, user_session, COUNT(*) 
+        SELECT event_time, event_type, product_id, price, \
+user_id, user_session, COUNT(*)
         FROM {schema}.{table}
-        GROUP BY event_time, event_type, product_id, price, user_id, user_session
+        GROUP BY event_time, event_type, product_id, price, \
+user_id, user_session
         HAVING COUNT(*) > 1;
         """).format(
             schema=sql.Identifier(d.schema),
