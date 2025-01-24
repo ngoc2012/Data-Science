@@ -1,6 +1,4 @@
-import os
 import sys
-import csv
 import psycopg2
 from psycopg2 import sql
 
@@ -67,7 +65,7 @@ if __name__ == "__main__":
 
         d.cursor.execute(sql.SQL("""
             UPDATE {schema}.{table}
-            SET 
+            SET
                 category_id = {schema}.item.category_id,
                 category_code = {schema}.item.category_code,
                 brand = {schema}.item.brand
