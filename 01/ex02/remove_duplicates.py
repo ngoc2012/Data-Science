@@ -122,7 +122,8 @@ user_id, user_session, COUNT(*)
         FROM {schema}.{table}
         GROUP BY event_time, event_type, product_id, price, \
 user_id, user_session
-        HAVING COUNT(*) > 1;
+        HAVING COUNT(*) > 1
+        ORDER BY product_id;
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
