@@ -84,22 +84,22 @@ if __name__ == "__main__":
                     product_id,
                     price,
                     user_id,
-                    user_session,
+                    COALESCE(user_session, '00000000-0000-0000-0000-000000000000') AS normalized_user_session,
                     ROW_NUMBER() OVER (
-                        PARTITION BY \
-event_time, event_type, product_id, price, user_id, user_session
+                        PARTITION BY event_time, event_type, product_id, price, user_id, 
+                        COALESCE(user_session, '00000000-0000-0000-0000-000000000000')
                         ORDER BY event_time
                     ) AS row_num
                 FROM {schema}.{table}
             )
             DELETE FROM {schema}.{table}
-            WHERE (event_time, event_type, product_id, price, \
-user_id, user_session) IN (
-                SELECT event_time, event_type, product_id, price, \
-user_id, user_session
+            WHERE (event_time, event_type, product_id, price, user_id, user_session) IN (
+                SELECT event_time, event_type, product_id, price, user_id, 
+                    COALESCE(user_session, '00000000-0000-0000-0000-000000000000')
                 FROM cte
                 WHERE row_num > 1
             );
+
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
