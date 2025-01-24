@@ -77,29 +77,13 @@ if __name__ == "__main__":
             4        103  2025-01-01 13:00:00   250.00       1
         """
         d.cursor.execute(sql.SQL("""
-            WITH cte AS (
-                SELECT
-                    event_time,
-                    event_type,
-                    product_id,
-                    price,
-                    user_id,
-                    COALESCE(user_session, '00000000-0000-0000-0000-000000000000') AS normalized_user_session,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY event_time, event_type, product_id, price, user_id, 
-                        COALESCE(user_session, '00000000-0000-0000-0000-000000000000')
-                        ORDER BY event_time
-                    ) AS row_num
-                FROM {schema}.{table}
-            )
-            DELETE FROM {schema}.{table}
-            WHERE (event_time, event_type, product_id, price, user_id, user_session) IN (
-                SELECT event_time, event_type, product_id, price, user_id, 
-                    COALESCE(user_session, '00000000-0000-0000-0000-000000000000')
-                FROM cte
-                WHERE row_num > 1
-            );
-
+            CREATE TEMPORARY TABLE temp_customers AS
+            SELECT DISTINCT * 
+            FROM minh_ngu_schema.customers;
+            TRUNCATE TABLE minh_ngu_schema.customers;
+            INSERT INTO minh_ngu_schema.customers
+            SELECT * FROM temp_customers;
+            DROP TABLE temp_customers;
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
@@ -117,16 +101,13 @@ if __name__ == "__main__":
         print(f"Rows count of 'customers' table after purge: {customers_count}")
 
         d.cursor.execute(sql.SQL("""
-        WITH cte AS (
-            SELECT
-                event_time, event_type, product_id, price, user_id, user_session,
-                ROW_NUMBER() OVER (
-                    PARTITION BY event_time, event_type, product_id, price, user_id, user_session
-                    ORDER BY event_time
-                ) AS row_num
-            FROM {schema}.{table}
-        )
-        SELECT * FROM cte WHERE row_num > 1;
+        SELECT event_time, event_type, product_id, price, \
+user_id, user_session, COUNT(*)
+        FROM {schema}.{table}
+        GROUP BY event_time, event_type, product_id, price, \
+user_id, user_session
+        HAVING COUNT(*) > 1
+        ORDER BY product_id;
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
