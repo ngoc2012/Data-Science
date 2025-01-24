@@ -117,13 +117,16 @@ user_id, user_session
         print(f"Rows count of 'customers' table after purge: {customers_count}")
 
         d.cursor.execute(sql.SQL("""
-        SELECT event_time, event_type, product_id, price, \
-user_id, user_session, COUNT(*)
-        FROM {schema}.{table}
-        GROUP BY event_time, event_type, product_id, price, \
-user_id, user_session
-        HAVING COUNT(*) > 1
-        ORDER BY product_id;
+        WITH cte AS (
+            SELECT
+                event_time, event_type, product_id, price, user_id, user_session,
+                ROW_NUMBER() OVER (
+                    PARTITION BY event_time, event_type, product_id, price, user_id, user_session
+                    ORDER BY event_time
+                ) AS row_num
+            FROM {schema}.{table}
+        )
+        SELECT * FROM cte WHERE row_num > 1;
         """).format(
             schema=sql.Identifier(d.schema),
             table=sql.Identifier(d.joined_table)
