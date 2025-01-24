@@ -114,7 +114,7 @@ user_id, user_session
                 table=sql.Identifier(d.joined_table)
             ))
         customers_count = d.cursor.fetchone()[0]
-        print(f"Rows count of 'customers' table after purge{customers_count}")
+        print(f"Rows count of 'customers' table after purge: {customers_count}")
 
         d.cursor.execute(sql.SQL("""
         SELECT event_time, event_type, product_id, price, \
